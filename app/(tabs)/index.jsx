@@ -1,24 +1,26 @@
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  Modal,
-} from "react-native";
 import { useState, useEffect, useRef } from "react";
 import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
 import ViewShot from "react-native-view-shot";
-import { Platform } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Modal,
+  Platform,
+  Alert,
+  Linking,
+  TextInput,
+} from "react-native";
 
 const OCSDisplay = ({ visible, data, onClose }) => {
   const viewShotRef = useRef();
   const [hasPermission, setHasPermission] = useState(false);
+  const [showButtons, setShowButtons] = useState(true);
 
-  // Request permission when component mounts
   useEffect(() => {
     (async () => {
       if (Platform.OS !== "web") {
@@ -30,153 +32,174 @@ const OCSDisplay = ({ visible, data, onClose }) => {
 
   const saveOCS = async () => {
     try {
-      // Check current permission status
-      const { status } = await MediaLibrary.getPermissionsAsync();
-
-      if (status !== "granted") {
-        // Try requesting permission
-        const { status: newStatus } =
-          await MediaLibrary.requestPermissionsAsync();
-
-        if (newStatus !== "granted") {
-          // If permission is denied, show alert with option to open settings
-          Alert.alert(
-            "Permission Required",
-            "Storage permission is required to save OCS documents. Please enable it in settings.",
-            [
-              { text: "Cancel", style: "cancel" },
-              {
-                text: "Open Settings",
-                onPress: () => {
-                  if (Platform.OS === "ios") {
-                    Linking.openSettings();
-                  } else {
-                    Linking.openSettings();
-                  }
+      if (Platform.OS !== "web") {
+        const { status } = await MediaLibrary.getPermissionsAsync();
+        if (status !== "granted") {
+          const { status: newStatus } =
+            await MediaLibrary.requestPermissionsAsync();
+          if (newStatus !== "granted") {
+            Alert.alert(
+              "Permission Required",
+              "Storage permission is required to save OCS documents. Please enable it in settings.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Open Settings",
+                  onPress: () => Linking.openSettings(),
                 },
-              },
-            ]
-          );
-          return;
+              ]
+            );
+            return;
+          }
         }
+
+        // Hide buttons before taking screenshot
+        setShowButtons(false);
+
+        // Wait for the state to update and UI to re-render
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Capture view as image and save
+        const uri = await viewShotRef.current.capture();
+        const asset = await MediaLibrary.createAssetAsync(uri);
+
+        // Show buttons again
+        setShowButtons(true);
+
+        alert("OCS has been saved to your gallery!");
+
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(uri);
+        }
+      } else {
+        // Web platform
+        setShowButtons(false);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        const uri = await viewShotRef.current.capture();
+
+        setShowButtons(true);
+
+        const link = document.createElement("a");
+        link.href = uri;
+        link.download = `OCS_${data.clientName}_${data.blockLot}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       }
 
-      // If we have permission, proceed with saving
-      const uri = await viewShotRef.current.capture();
-      const asset = await MediaLibrary.createAssetAsync(uri);
-      alert("OCS has been saved to your gallery!");
-
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri);
-      }
+      alert("OCS has been saved successfully!");
     } catch (error) {
       console.error("Error saving OCS:", error);
       alert("Failed to save OCS. Please try again.");
+      setShowButtons(true); // Make sure buttons are shown if there's an error
     }
   };
 
   return (
     <Modal visible={visible} animationType="slide">
-      <ViewShot ref={viewShotRef} options={{ format: "png", quality: 0.9 }}>
-        <ScrollView style={styles.ocsContainer}>
-          <View style={styles.ocsHeader}>
-            <Text style={styles.ocsTitle}>Evergreen Realty PH</Text>
-            <View style={styles.ocsClientInfo}>
-              <View style={styles.ocsInfoRow}>
-                <Text style={styles.ocsInfoLabel}>Client Name:</Text>
-                <Text style={styles.ocsInfoValue}>{data.clientName}</Text>
-              </View>
-              <View style={styles.ocsInfoRow}>
-                <Text style={styles.ocsInfoLabel}>Project:</Text>
-                <Text style={styles.ocsInfoValue}>{data.project}</Text>
-              </View>
-              <View style={styles.ocsInfoRow}>
-                <Text style={styles.ocsInfoLabel}>Number:</Text>
-                <Text style={styles.ocsInfoValue}>{data.phoneNumber}</Text>
-              </View>
-            </View>
-          </View>
-
-          <Text style={styles.ocsMainTitle}>OFFICIAL COMPUTATION SHEET</Text>
-
-          <View style={styles.ocsDetailsGrid}>
-            <View style={styles.ocsGridRow}>
-              <View style={styles.ocsGridItem}>
-                <Text style={styles.ocsLabel}>Reservation Date:</Text>
-                <Text style={styles.ocsValue}>{data.reservationDate}</Text>
-              </View>
-              <View style={styles.ocsGridItem}>
-                <Text style={styles.ocsLabel}>Block and Lot Number:</Text>
-                <Text style={styles.ocsValue}>{data.blockLot}</Text>
+      <View style={styles.ocsWrapper}>
+        <ViewShot ref={viewShotRef} options={{ format: "png", quality: 0.9 }}>
+          <ScrollView style={styles.ocsContainer}>
+            <View style={styles.ocsHeader}>
+              <Text style={styles.ocsTitle}>Evergreen Realty PH</Text>
+              <View style={styles.ocsClientInfo}>
+                <View style={styles.ocsInfoRow}>
+                  <Text style={styles.ocsInfoLabel}>Client Name:</Text>
+                  <Text style={styles.ocsInfoValue}>{data.clientName}</Text>
+                </View>
+                <View style={styles.ocsInfoRow}>
+                  <Text style={styles.ocsInfoLabel}>Project:</Text>
+                  <Text style={styles.ocsInfoValue}>{data.project}</Text>
+                </View>
+                <View style={styles.ocsInfoRow}>
+                  <Text style={styles.ocsInfoLabel}>Number:</Text>
+                  <Text style={styles.ocsInfoValue}>{data.phoneNumber}</Text>
+                </View>
               </View>
             </View>
-            <View style={styles.ocsGridRow}>
-              <View style={styles.ocsGridItem}>
-                <Text style={styles.ocsLabel}>Terms:</Text>
-                <Text style={styles.ocsValue}>{data.terms}</Text>
+
+            <Text style={styles.ocsMainTitle}>OFFICIAL COMPUTATION SHEET</Text>
+
+            <View style={styles.ocsDetailsGrid}>
+              <View style={styles.ocsGridRow}>
+                <View style={styles.ocsGridItem}>
+                  <Text style={styles.ocsLabel}>Reservation Date:</Text>
+                  <Text style={styles.ocsValue}>{data.reservationDate}</Text>
+                </View>
+                <View style={styles.ocsGridItem}>
+                  <Text style={styles.ocsLabel}>Block and Lot Number:</Text>
+                  <Text style={styles.ocsValue}>{data.blockLot}</Text>
+                </View>
               </View>
-              <View style={styles.ocsGridItem}>
-                <Text style={styles.ocsLabel}>Price per sq.m.:</Text>
-                <Text style={styles.ocsValue}>
-                  ₱
-                  {parseFloat(data.pricePerSqm).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                  })}
-                </Text>
+              <View style={styles.ocsGridRow}>
+                <View style={styles.ocsGridItem}>
+                  <Text style={styles.ocsLabel}>Terms:</Text>
+                  <Text style={styles.ocsValue}>{data.terms}</Text>
+                </View>
+                <View style={styles.ocsGridItem}>
+                  <Text style={styles.ocsLabel}>Price per sq.m.:</Text>
+                  <Text style={styles.ocsValue}>
+                    ₱
+                    {parseFloat(data.pricePerSqm).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                    })}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.ocsGridRow}>
+                <View style={styles.ocsGridItem}>
+                  <Text style={styles.ocsLabel}>Type:</Text>
+                  <Text style={styles.ocsValue}>Agricultural</Text>
+                </View>
+                <View style={styles.ocsGridItem}>
+                  <Text style={styles.ocsLabel}>Lot Area in sq.m.:</Text>
+                  <Text style={styles.ocsValue}>{data.lotArea}</Text>
+                </View>
               </View>
             </View>
-            <View style={styles.ocsGridRow}>
-              <View style={styles.ocsGridItem}>
-                <Text style={styles.ocsLabel}>Type:</Text>
-                <Text style={styles.ocsValue}>Agricultural</Text>
-              </View>
-              <View style={styles.ocsGridItem}>
-                <Text style={styles.ocsLabel}>Lot Area in sq.m.:</Text>
-                <Text style={styles.ocsValue}>{data.lotArea}</Text>
-              </View>
-            </View>
-          </View>
 
-          <View style={styles.ocsTotalPrice}>
-            <Text style={styles.ocsTotalLabel}>TOTAL CONTRACT PRICE</Text>
-            <Text style={styles.ocsTotalAmount}>
-              ₱{data.totalPrice.toLocaleString()}
-            </Text>
-          </View>
-
-          <View style={styles.ocsBreakdown}>
-            <Text style={styles.ocsBreakdownTitle}>BREAKDOWN OF PAYMENT</Text>
-            <View style={styles.ocsSpotcashContainer}>
-              <Text style={styles.ocsSpotcashLabel}>SPOTCASH</Text>
-              <Text style={styles.ocsSpotcashAmount}>
+            <View style={styles.ocsTotalPrice}>
+              <Text style={styles.ocsTotalLabel}>TOTAL CONTRACT PRICE</Text>
+              <Text style={styles.ocsTotalAmount}>
                 ₱{data.totalPrice.toLocaleString()}
               </Text>
-              <Text style={styles.ocsNote}>
-                Shall be payable within a month, reservation fee
-              </Text>
-              <Text style={styles.ocsNote}>₱ 20,000.00 is deductible.</Text>
-              <View style={styles.ocsPaymentSchedule}>
-                <Text style={styles.ocsPaymentDate}>
-                  {data.paymentMonth} {data.paymentYear}
-                </Text>
-                <Text style={styles.ocsPaymentAmount}>
+            </View>
+
+            <View style={styles.ocsBreakdown}>
+              <Text style={styles.ocsBreakdownTitle}>BREAKDOWN OF PAYMENT</Text>
+              <View style={styles.ocsSpotcashContainer}>
+                <Text style={styles.ocsSpotcashLabel}>SPOTCASH</Text>
+                <Text style={styles.ocsSpotcashAmount}>
                   ₱{data.totalPrice.toLocaleString()}
                 </Text>
+                <Text style={styles.ocsNote}>
+                  Shall be payable within a month, reservation fee
+                </Text>
+                <Text style={styles.ocsNote}>₱ 20,000.00 is deductible.</Text>
+                <View style={styles.ocsPaymentSchedule}>
+                  <Text style={styles.ocsPaymentDate}>
+                    {data.paymentMonth} {data.paymentYear}
+                  </Text>
+                  <Text style={styles.ocsPaymentAmount}>
+                    ₱{data.totalPrice.toLocaleString()}
+                  </Text>
+                </View>
               </View>
             </View>
-          </View>
 
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.downloadButton} onPress={saveOCS}>
-              <Text style={styles.buttonText}>Save OCS</Text>
-            </TouchableOpacity>
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity style={styles.downloadButton} onPress={saveOCS}>
+                <Text style={styles.buttonText}>Save OCS</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Text style={styles.closeButtonText}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </ViewShot>
+              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                <Text style={styles.closeButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </ViewShot>
+      </View>
     </Modal>
   );
 };
@@ -462,10 +485,28 @@ const styles = StyleSheet.create({
   },
 
   ocsContainer: {
-    flex: 1,
+    width: Platform.OS === "web" ? 595 : "85%", // A4 width in points for web, 85% for mobile
+    maxWidth: 595, // Maximum width (A4 width in points)
     backgroundColor: "white",
     padding: 20,
+    alignSelf: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
+
+  ocsWrapper: {
+    flex: 1,
+    backgroundColor: "#f0f0f0", // Light gray background for contrast
+    alignItems: "center",
+    padding: 20,
+  },
+
   ocsHeader: {
     backgroundColor: "#2E7D32",
     padding: 15,
