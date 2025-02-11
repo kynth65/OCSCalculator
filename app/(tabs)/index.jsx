@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
-import ViewShot from "react-native-view-shot";
+import * as Print from "expo-print";
 import {
   View,
   Text,
@@ -17,188 +16,295 @@ import {
 } from "react-native";
 
 const OCSDisplay = ({ visible, data, onClose }) => {
-  const viewShotRef = useRef();
-  const [hasPermission, setHasPermission] = useState(false);
   const [showButtons, setShowButtons] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      if (Platform.OS !== "web") {
-        const { status } = await MediaLibrary.requestPermissionsAsync();
-        setHasPermission(status === "granted");
-      }
-    })();
-  }, []);
+  const createAndSharePDF = async () => {
+    // Hide buttons
+    setShowButtons(false);
 
-  const saveOCS = async () => {
+    // Wait for the state update to be reflected in the UI
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
     try {
-      if (Platform.OS !== "web") {
-        const { status } = await MediaLibrary.getPermissionsAsync();
-        if (status !== "granted") {
-          const { status: newStatus } =
-            await MediaLibrary.requestPermissionsAsync();
-          if (newStatus !== "granted") {
-            Alert.alert(
-              "Permission Required",
-              "Storage permission is required to save OCS documents. Please enable it in settings.",
-              [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Open Settings",
-                  onPress: () => Linking.openSettings(),
-                },
-              ]
-            );
-            return;
-          }
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Official Computation Sheet</title>
+            <style>
+              @page {
+                margin: 20px;
+              }
+              body {
+                font-family: Arial, sans-serif;
+                color: #333;
+                line-height: 1.4;
+                padding: 20px;
+              }
+              .company-name {
+                color: #666;
+                text-align: center;
+                font-size: 24px;
+                margin-bottom: 20px;
+              }
+              .client-details {
+                margin: 20px 0;
+              }
+              .client-details div {
+                margin: 5px 0;
+              }
+              .label {
+                color: #008000;
+                font-weight: bold;
+                display: inline-block;
+                width: 140px;
+              }
+              .main-title {
+                text-align: center;
+                font-size: 18px;
+                font-weight: bold;
+                margin: 30px 0;
+                text-transform: uppercase;
+              }
+              .details-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+                margin: 20px 0;
+              }
+              .grid-item {
+                margin-bottom: 10px;
+              }
+              .total-section {
+                text-align: center;
+                margin: 30px 0;
+                color: #666;
+                text-transform: uppercase;
+              }
+              .total-amount {
+                font-size: 22px;
+                font-weight: bold;
+                margin-top: 10px;
+              }
+              .breakdown {
+                margin-top: 30px;
+              }
+              .breakdown-title {
+                text-align: center;
+                font-size: 18px;
+                color: #666;
+                margin-bottom: 20px;
+                text-transform: uppercase;
+              }
+              .spotcash {
+                color: #008000;
+                font-weight: bold;
+                font-size: 18px;
+                margin: 10px 0;
+              }
+              .payment-note {
+                color: #FF0000;
+                font-style: italic;
+                margin: 10px 0;
+              }
+              .payment-schedule {
+                margin-top: 20px;
+                text-align: right;
+              }
+            </style>
+          </head>
+          <body>
+            <!-- Rest of your HTML content remains the same -->
+          </body>
+        </html>
+      `;
+
+      // Generate PDF
+      const { uri } = await Print.printToFileAsync({
+        html: htmlContent,
+        base64: false,
+      });
+
+      // Platform specific sharing logic
+      if (Platform.OS === "android") {
+        const pdfName = `OCS_${data.clientName}_${data.blockLot}.pdf`;
+        const downloadDir = `${FileSystem.documentDirectory}Download/`;
+        const destinationUri = `${downloadDir}${pdfName}`;
+
+        const dirInfo = await FileSystem.getInfoAsync(downloadDir);
+        if (!dirInfo.exists) {
+          await FileSystem.makeDirectoryAsync(downloadDir, {
+            intermediates: true,
+          });
         }
 
-        // Hide buttons before taking screenshot
-        setShowButtons(false);
-
-        // Wait for the state to update and UI to re-render
-        await new Promise((resolve) => setTimeout(resolve, 100));
-
-        // Capture view as image and save
-        const uri = await viewShotRef.current.capture();
-        const asset = await MediaLibrary.createAssetAsync(uri);
-
-        // Show buttons again
-        setShowButtons(true);
-
-        alert("OCS has been saved to your gallery!");
+        await FileSystem.copyAsync({
+          from: uri,
+          to: destinationUri,
+        });
 
         if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(uri);
+          await Sharing.shareAsync(destinationUri, {
+            mimeType: "application/pdf",
+            dialogTitle: "Share OCS PDF",
+          });
         }
       } else {
-        // Web platform
-        setShowButtons(false);
-        await new Promise((resolve) => setTimeout(resolve, 100));
-
-        const uri = await viewShotRef.current.capture();
-
-        setShowButtons(true);
-
-        const link = document.createElement("a");
-        link.href = uri;
-        link.download = `OCS_${data.clientName}_${data.blockLot}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(uri, {
+            mimeType: "application/pdf",
+            dialogTitle: "Share OCS PDF",
+          });
+        }
       }
 
-      alert("OCS has been saved successfully!");
+      Alert.alert("Success", "PDF has been created successfully!", [
+        {
+          text: "OK",
+          onPress: () => {
+            // Show buttons again after successful PDF generation
+            setShowButtons(true);
+          },
+        },
+      ]);
     } catch (error) {
-      console.error("Error saving OCS:", error);
-      alert("Failed to save OCS. Please try again.");
-      setShowButtons(true); // Make sure buttons are shown if there's an error
+      console.error("Error creating PDF:", error);
+      Alert.alert(
+        "Error",
+        "Failed to create PDF: " + (error.message || "Unknown error"),
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              // Show buttons again if there was an error
+              setShowButtons(true);
+            },
+          },
+        ]
+      );
     }
   };
 
   return (
     <Modal visible={visible} animationType="slide">
-      <View style={styles.ocsWrapper}>
-        <ViewShot ref={viewShotRef} options={{ format: "png", quality: 0.9 }}>
-          <ScrollView style={styles.ocsContainer}>
-            <View style={styles.ocsHeader}>
-              <Text style={styles.ocsTitle}>Evergreen Realty PH</Text>
-              <View style={styles.ocsClientInfo}>
-                <View style={styles.ocsInfoRow}>
-                  <Text style={styles.ocsInfoLabel}>Client Name:</Text>
-                  <Text style={styles.ocsInfoValue}>{data.clientName}</Text>
-                </View>
-                <View style={styles.ocsInfoRow}>
-                  <Text style={styles.ocsInfoLabel}>Project:</Text>
-                  <Text style={styles.ocsInfoValue}>{data.project}</Text>
-                </View>
-                <View style={styles.ocsInfoRow}>
-                  <Text style={styles.ocsInfoLabel}>Number:</Text>
-                  <Text style={styles.ocsInfoValue}>{data.phoneNumber}</Text>
-                </View>
+      <View style={ocsStyles.ocsWrapper}>
+        <ScrollView style={ocsStyles.ocsContainer}>
+          {/* Header Section */}
+          <View style={ocsStyles.headerSection}>
+            <Text style={ocsStyles.companyName}>Evergreen Realty PH</Text>
+            <View style={ocsStyles.clientInfoBox}>
+              <View style={ocsStyles.infoRow}>
+                <Text style={ocsStyles.infoLabel}>Client Name:</Text>
+                <Text style={ocsStyles.infoValue}>{data.clientName}</Text>
+              </View>
+              <View style={ocsStyles.infoRow}>
+                <Text style={ocsStyles.infoLabel}>Project:</Text>
+                <Text style={ocsStyles.infoValue}>{data.project}</Text>
+              </View>
+              <View style={ocsStyles.infoRow}>
+                <Text style={ocsStyles.infoLabel}>Number:</Text>
+                <Text style={ocsStyles.infoValue}>{data.phoneNumber}</Text>
               </View>
             </View>
+          </View>
 
-            <Text style={styles.ocsMainTitle}>OFFICIAL COMPUTATION SHEET</Text>
+          <View style={ocsStyles.divider} />
 
-            <View style={styles.ocsDetailsGrid}>
-              <View style={styles.ocsGridRow}>
-                <View style={styles.ocsGridItem}>
-                  <Text style={styles.ocsLabel}>Reservation Date:</Text>
-                  <Text style={styles.ocsValue}>{data.reservationDate}</Text>
-                </View>
-                <View style={styles.ocsGridItem}>
-                  <Text style={styles.ocsLabel}>Block and Lot Number:</Text>
-                  <Text style={styles.ocsValue}>{data.blockLot}</Text>
-                </View>
+          {/* Main Title */}
+          <Text style={ocsStyles.mainTitle}>OFFICIAL COMPUTATION SHEET</Text>
+
+          {/* Details Grid */}
+          <View style={ocsStyles.detailsGrid}>
+            <View style={ocsStyles.gridRow}>
+              <View style={ocsStyles.gridItem}>
+                <Text style={ocsStyles.gridLabel}>Reservation Date:</Text>
+                <Text style={ocsStyles.gridValue}>{data.reservationDate}</Text>
               </View>
-              <View style={styles.ocsGridRow}>
-                <View style={styles.ocsGridItem}>
-                  <Text style={styles.ocsLabel}>Terms:</Text>
-                  <Text style={styles.ocsValue}>{data.terms}</Text>
-                </View>
-                <View style={styles.ocsGridItem}>
-                  <Text style={styles.ocsLabel}>Price per sq.m.:</Text>
-                  <Text style={styles.ocsValue}>
-                    ₱
-                    {parseFloat(data.pricePerSqm).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                    })}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.ocsGridRow}>
-                <View style={styles.ocsGridItem}>
-                  <Text style={styles.ocsLabel}>Type:</Text>
-                  <Text style={styles.ocsValue}>Agricultural</Text>
-                </View>
-                <View style={styles.ocsGridItem}>
-                  <Text style={styles.ocsLabel}>Lot Area in sq.m.:</Text>
-                  <Text style={styles.ocsValue}>{data.lotArea}</Text>
-                </View>
+              <View style={ocsStyles.gridItem}>
+                <Text style={ocsStyles.gridLabel}>Block and Lot Number:</Text>
+                <Text style={ocsStyles.gridValue}>{data.blockLot}</Text>
               </View>
             </View>
+            <View style={ocsStyles.gridRow}>
+              <View style={ocsStyles.gridItem}>
+                <Text style={ocsStyles.gridLabel}>Terms:</Text>
+                <Text style={ocsStyles.gridValue}>{data.terms}</Text>
+              </View>
+              <View style={ocsStyles.gridItem}>
+                <Text style={ocsStyles.gridLabel}>Price per sq.m.:</Text>
+                <Text style={ocsStyles.gridValue}>
+                  ₱
+                  {parseFloat(data.pricePerSqm).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                  })}
+                </Text>
+              </View>
+            </View>
+            <View style={ocsStyles.gridRow}>
+              <View style={ocsStyles.gridItem}>
+                <Text style={ocsStyles.gridLabel}>Type:</Text>
+                <Text style={ocsStyles.gridValue}>Agricultural</Text>
+              </View>
+              <View style={ocsStyles.gridItem}>
+                <Text style={ocsStyles.gridLabel}>Lot Area in sq.m.:</Text>
+                <Text style={ocsStyles.gridValue}>{data.lotArea}</Text>
+              </View>
+            </View>
+          </View>
 
-            <View style={styles.ocsTotalPrice}>
-              <Text style={styles.ocsTotalLabel}>TOTAL CONTRACT PRICE</Text>
-              <Text style={styles.ocsTotalAmount}>
+          <View style={ocsStyles.divider} />
+
+          {/* Total Price Section */}
+          <View style={ocsStyles.totalPriceSection}>
+            <Text style={ocsStyles.totalLabel}>TOTAL CONTRACT PRICE</Text>
+            <Text style={ocsStyles.totalAmount}>
+              ₱{data.totalPrice.toLocaleString()}
+            </Text>
+          </View>
+
+          <View style={ocsStyles.divider} />
+
+          {/* Payment Breakdown */}
+          <View style={ocsStyles.breakdownSection}>
+            <Text style={ocsStyles.breakdownTitle}>BREAKDOWN OF PAYMENT</Text>
+            <View style={ocsStyles.spotcashSection}>
+              <Text style={ocsStyles.spotcashLabel}>SPOTCASH</Text>
+              <Text style={ocsStyles.spotcashAmount}>
                 ₱{data.totalPrice.toLocaleString()}
               </Text>
-            </View>
-
-            <View style={styles.ocsBreakdown}>
-              <Text style={styles.ocsBreakdownTitle}>BREAKDOWN OF PAYMENT</Text>
-              <View style={styles.ocsSpotcashContainer}>
-                <Text style={styles.ocsSpotcashLabel}>SPOTCASH</Text>
-                <Text style={styles.ocsSpotcashAmount}>
+              <Text style={ocsStyles.paymentNote}>
+                Shall be payable within a month, reservation fee
+              </Text>
+              <Text style={ocsStyles.paymentNote}>
+                ₱ 20,000.00 is deductible.
+              </Text>
+              <View style={ocsStyles.paymentSchedule}>
+                <Text style={ocsStyles.scheduleDate}>
+                  {data.paymentMonth} {data.paymentYear}
+                </Text>
+                <Text style={ocsStyles.scheduleAmount}>
                   ₱{data.totalPrice.toLocaleString()}
                 </Text>
-                <Text style={styles.ocsNote}>
-                  Shall be payable within a month, reservation fee
-                </Text>
-                <Text style={styles.ocsNote}>₱ 20,000.00 is deductible.</Text>
-                <View style={styles.ocsPaymentSchedule}>
-                  <Text style={styles.ocsPaymentDate}>
-                    {data.paymentMonth} {data.paymentYear}
-                  </Text>
-                  <Text style={styles.ocsPaymentAmount}>
-                    ₱{data.totalPrice.toLocaleString()}
-                  </Text>
-                </View>
               </View>
             </View>
+          </View>
 
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity style={styles.downloadButton} onPress={saveOCS}>
-                <Text style={styles.buttonText}>Save OCS</Text>
+          {/* Buttons */}
+          {showButtons && (
+            <View style={ocsStyles.buttonContainer}>
+              <TouchableOpacity
+                style={ocsStyles.generateButton}
+                onPress={createAndSharePDF}
+              >
+                <Text style={ocsStyles.buttonText}>Generate PDF</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                <Text style={styles.closeButtonText}>Close</Text>
+              <TouchableOpacity style={ocsStyles.closeButton} onPress={onClose}>
+                <Text style={ocsStyles.buttonText}>Close</Text>
               </TouchableOpacity>
             </View>
-          </ScrollView>
-        </ViewShot>
+          )}
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -689,5 +795,159 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 25,
     alignItems: "center",
+  },
+});
+
+const ocsStyles = StyleSheet.create({
+  ocsWrapper: {
+    flex: 1,
+    padding: 10,
+    backgroundColor: "white",
+    justifyContent: "center", // Center vertically
+    alignItems: "center", // Center horizontally
+  },
+  ocsContainer: {
+    width: "100%",
+    maxWidth: 500, // Control maximum width
+    alignSelf: "center", // Center the container
+  },
+  headerSection: {
+    borderWidth: 1,
+    padding: 8,
+  },
+  companyName: {
+    fontSize: 18,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 5,
+  },
+  clientInfoBox: {
+    padding: 8,
+    margin: 5,
+  },
+  infoRow: {
+    flexDirection: "row",
+    marginBottom: 2,
+  },
+  infoLabel: {
+    width: 80,
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  infoValue: {
+    flex: 1,
+    fontSize: 12,
+  },
+  mainTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginVertical: 10,
+  },
+  detailsGrid: {
+    padding: 8,
+    borderWidth: 1,
+  },
+  gridRow: {
+    flexDirection: "row",
+    marginBottom: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
+    paddingVertical: 3,
+  },
+  gridItem: {
+    flex: 1,
+    paddingHorizontal: 5,
+  },
+  gridLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  gridValue: {
+    fontSize: 12,
+  },
+  totalPriceSection: {
+    borderWidth: 1,
+    padding: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  totalLabel: {
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  totalAmount: {
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  breakdownSection: {
+    marginTop: 0,
+  },
+  breakdownTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    textAlign: "center",
+    padding: 8,
+    borderWidth: 1,
+  },
+  spotcashSection: {
+    padding: 8,
+    borderWidth: 1,
+    borderTopWidth: 0,
+  },
+  spotcashLabel: {
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  spotcashAmount: {
+    fontSize: 14,
+    fontWeight: "bold",
+    textAlign: "right",
+    borderBottomWidth: 1,
+    paddingBottom: 5,
+    marginBottom: 5,
+  },
+  paymentNote: {
+    fontStyle: "italic",
+    fontSize: 11,
+  },
+  paymentSchedule: {
+    marginTop: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingTop: 5,
+    borderTopWidth: 1,
+  },
+  scheduleDate: {
+    fontSize: 12,
+  },
+  scheduleAmount: {
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 15,
+    gap: 8,
+  },
+  generateButton: {
+    flex: 1,
+    borderWidth: 1,
+    padding: 10,
+    borderRadius: 4,
+    alignItems: "center",
+  },
+  closeButton: {
+    flex: 1,
+    borderWidth: 1,
+    padding: 10,
+    borderRadius: 4,
+    alignItems: "center",
+  },
+  buttonText: {
+    fontSize: 14,
+    fontWeight: "bold",
   },
 });
