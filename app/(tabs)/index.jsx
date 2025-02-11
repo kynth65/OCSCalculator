@@ -496,6 +496,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "white",
     padding: 20,
+    width: "100%",
+    maxWidth: 500, // Add max width for better mobile display
+    alignSelf: "center", // Center the container
   },
   title: {
     color: "black",
@@ -523,6 +526,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 20,
     fontSize: 16,
+    width: "100%", // Ensure full width
   },
   priceContainer: {
     flexDirection: "row",
@@ -530,6 +534,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F5F5F5",
     borderRadius: 8,
     marginBottom: 20,
+    width: "100%", // Ensure full width
   },
   pesoSign: {
     fontSize: 16,
@@ -546,6 +551,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     marginBottom: 20,
+    width: "100%", // Ensure full width
   },
   totalPriceText: {
     fontSize: 18,
@@ -557,6 +563,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 15,
     marginBottom: 20,
+    width: "100%", // Ensure full width
   },
   breakdownText: {
     fontSize: 16,
@@ -574,12 +581,38 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     lineHeight: 20,
   },
+  dateContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 10,
+    marginBottom: 20,
+    width: "100%", // Ensure full width
+  },
+  dateInputGroup: {
+    flex: 1,
+  },
+  dateInput: {
+    marginBottom: 0,
+    borderWidth: 1, // Add border
+    borderColor: "#ddd", // Light gray border
+    backgroundColor: "#F5F5F5",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+  },
+  sublabel: {
+    color: "#2E7D32",
+    fontSize: 14,
+    marginBottom: 5,
+    marginLeft: 12,
+  },
   button: {
     backgroundColor: "#FFB6A5",
     borderRadius: 25,
     padding: 15,
     alignItems: "center",
     marginVertical: 20,
+    width: "100%", // Ensure full width
   },
   buttonText: {
     color: "white",
@@ -590,153 +623,6 @@ const styles = StyleSheet.create({
     height: 50,
   },
 
-  ocsContainer: {
-    width: Platform.OS === "web" ? 595 : "85%", // A4 width in points for web, 85% for mobile
-    maxWidth: 595, // Maximum width (A4 width in points)
-    backgroundColor: "white",
-    padding: 20,
-    alignSelf: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-
-  ocsWrapper: {
-    flex: 1,
-    backgroundColor: "#f0f0f0", // Light gray background for contrast
-    alignItems: "center",
-    padding: 20,
-  },
-
-  ocsHeader: {
-    backgroundColor: "#2E7D32",
-    padding: 15,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-  },
-  ocsTitle: {
-    color: "white",
-    fontSize: 24,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 10,
-  },
-  ocsClientInfo: {
-    backgroundColor: "white",
-    padding: 10,
-    borderRadius: 4,
-  },
-  ocsInfoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 5,
-  },
-  ocsInfoLabel: {
-    color: "#2E7D32",
-    fontSize: 14,
-    fontWeight: "500",
-    width: 100, // Fixed width for labels to align them
-  },
-  ocsInfoValue: {
-    fontSize: 16,
-    fontWeight: "500",
-    flex: 1,
-  },
-  ocsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 5,
-  },
-  ocsMainTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginVertical: 15,
-  },
-  ocsDetailsGrid: {
-    backgroundColor: "#F5F5F5",
-    padding: 15,
-    borderRadius: 8,
-  },
-  ocsGridRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  ocsGridItem: {
-    flex: 1,
-    paddingHorizontal: 5,
-  },
-  ocsLabel: {
-    color: "#2E7D32",
-    fontSize: 14,
-    marginBottom: 2,
-  },
-  ocsValue: {
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  ocsTotalPrice: {
-    backgroundColor: "black",
-    padding: 15,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginVertical: 15,
-  },
-  ocsTotalLabel: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  ocsTotalAmount: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  ocsBreakdown: {
-    backgroundColor: "#2E7D32",
-    borderRadius: 8,
-  },
-  ocsBreakdownTitle: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "bold",
-    textAlign: "center",
-    padding: 10,
-  },
-  ocsSpotcashContainer: {
-    backgroundColor: "#F5F5F5",
-    padding: 15,
-  },
-  ocsSpotcashLabel: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#2E7D32",
-  },
-  ocsSpotcashAmount: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#2E7D32",
-    marginBottom: 10,
-  },
-  ocsNote: {
-    color: "#FF6B6B",
-    fontSize: 14,
-    fontStyle: "italic",
-  },
-  ocsPaymentSchedule: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 15,
-    paddingTop: 15,
-    borderTopWidth: 1,
-    borderTopColor: "#ddd",
-  },
   closeButton: {
     backgroundColor: "#FFB6A5",
     padding: 15,
@@ -801,153 +687,154 @@ const styles = StyleSheet.create({
 const ocsStyles = StyleSheet.create({
   ocsWrapper: {
     flex: 1,
-    padding: 10,
+    padding: 16, // Increased from 13
     backgroundColor: "white",
-    justifyContent: "center", // Center vertically
-    alignItems: "center", // Center horizontally
+    justifyContent: "center",
+    alignItems: "center",
   },
   ocsContainer: {
     width: "100%",
-    maxWidth: 500, // Control maximum width
-    alignSelf: "center", // Center the container
+    maxWidth: 750, // Increased from 625
+    alignSelf: "center",
   },
   headerSection: {
     borderWidth: 1,
-    padding: 8,
+    padding: 12, // Increased from 10
   },
   companyName: {
-    fontSize: 18,
+    fontSize: 28, // Increased from 23
     fontWeight: "bold",
     textAlign: "center",
-    marginBottom: 5,
+    marginBottom: 7, // Increased from 6
+    textDecorationColor: "green",
   },
   clientInfoBox: {
-    padding: 8,
-    margin: 5,
+    padding: 12, // Increased from 10
+    margin: 7, // Increased from 6
   },
   infoRow: {
     flexDirection: "row",
-    marginBottom: 2,
+    marginBottom: 4, // Increased from 3
   },
   infoLabel: {
-    width: 80,
-    fontSize: 12,
+    width: 120, // Increased from 100
+    fontSize: 18, // Increased from 15
     fontWeight: "500",
   },
   infoValue: {
     flex: 1,
-    fontSize: 12,
+    fontSize: 18, // Increased from 15
   },
   mainTitle: {
-    fontSize: 16,
+    fontSize: 24, // Increased from 20
     fontWeight: "bold",
     textAlign: "center",
-    marginVertical: 10,
+    marginVertical: 16, // Increased from 13
   },
   detailsGrid: {
-    padding: 8,
+    padding: 12, // Increased from 10
     borderWidth: 1,
   },
   gridRow: {
     flexDirection: "row",
-    marginBottom: 5,
+    marginBottom: 7, // Increased from 6
     borderBottomWidth: 1,
     borderBottomColor: "#ddd",
-    paddingVertical: 3,
+    paddingVertical: 5, // Increased from 4
   },
   gridItem: {
     flex: 1,
-    paddingHorizontal: 5,
+    paddingHorizontal: 7, // Increased from 6
   },
   gridLabel: {
-    fontSize: 12,
+    fontSize: 18, // Increased from 15
     fontWeight: "500",
   },
   gridValue: {
-    fontSize: 12,
+    fontSize: 18, // Increased from 15
   },
   totalPriceSection: {
     borderWidth: 1,
-    padding: 8,
+    padding: 12, // Increased from 10
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   totalLabel: {
-    fontSize: 14,
+    fontSize: 22, // Increased from 18
     fontWeight: "bold",
   },
   totalAmount: {
-    fontSize: 14,
+    fontSize: 22, // Increased from 18
     fontWeight: "bold",
   },
   breakdownSection: {
     marginTop: 0,
   },
   breakdownTitle: {
-    fontSize: 14,
+    fontSize: 22, // Increased from 18
     fontWeight: "bold",
     textAlign: "center",
-    padding: 8,
+    padding: 12, // Increased from 10
     borderWidth: 1,
   },
   spotcashSection: {
-    padding: 8,
+    padding: 12, // Increased from 10
     borderWidth: 1,
     borderTopWidth: 0,
   },
   spotcashLabel: {
-    fontSize: 14,
+    fontSize: 22, // Increased from 18
     fontWeight: "bold",
   },
   spotcashAmount: {
-    fontSize: 14,
+    fontSize: 22, // Increased from 18
     fontWeight: "bold",
     textAlign: "right",
     borderBottomWidth: 1,
-    paddingBottom: 5,
-    marginBottom: 5,
+    paddingBottom: 7, // Increased from 6
+    marginBottom: 7, // Increased from 6
   },
   paymentNote: {
     fontStyle: "italic",
-    fontSize: 11,
+    fontSize: 17, // Increased from 14
   },
   paymentSchedule: {
-    marginTop: 8,
+    marginTop: 12, // Increased from 10
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingTop: 5,
+    paddingTop: 7, // Increased from 6
     borderTopWidth: 1,
   },
   scheduleDate: {
-    fontSize: 12,
+    fontSize: 18, // Increased from 15
   },
   scheduleAmount: {
-    fontSize: 12,
+    fontSize: 18, // Increased from 15
     fontWeight: "bold",
   },
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 15,
-    gap: 8,
+    marginTop: 23, // Increased from 19
+    gap: 12, // Increased from 10
   },
   generateButton: {
     flex: 1,
     borderWidth: 1,
-    padding: 10,
-    borderRadius: 4,
+    padding: 16, // Increased from 13
+    borderRadius: 6, // Increased from 5
     alignItems: "center",
   },
   closeButton: {
     flex: 1,
     borderWidth: 1,
-    padding: 10,
-    borderRadius: 4,
+    padding: 16, // Increased from 13
+    borderRadius: 6, // Increased from 5
     alignItems: "center",
   },
   buttonText: {
-    fontSize: 14,
+    fontSize: 22, // Increased from 18
     fontWeight: "bold",
   },
 });
